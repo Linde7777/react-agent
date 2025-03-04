@@ -1,4 +1,5 @@
 from enum import Enum, auto
+from http.client import responses
 from typing import Union, Callable, List, Dict
 from pydantic import BaseModel, Field
 from openai import OpenAI
@@ -49,7 +50,7 @@ class Agent:
         self.query = ""
         self.max_iteration = 5
         self.current_iteration = 0
-        self.template = self.load_template()
+        self.prompt_template = self.load_template()
 
     def load_template(self) -> str:
         return read_path(PROMPT_TEMPLATE_PATH)
@@ -67,17 +68,33 @@ class Agent:
         """
         if role != "system":
             self.messages.append(Message(role=role, content=content))
-        write_to_file(path=OUTPUT_TRACE_PATH,content=f"{role}:{content}\n")
+        write_to_file(path=OUTPUT_TRACE_PATH, content=f"{role}:{content}\n")
 
-    def get_history(self)->str:
+    def get_history(self) -> str:
         return "\n".join([f"{message.role}: {message.content}" for message in self.messages])
 
-    def think(self) -> None: ...
+    def think(self) -> None:
+        self.current_iteration += 1
+        if self.current_iteration > self.max_iteration:
+            logger.warning("Reached maximum iterations. Stopping.")
+            return
+        prompt = self.prompt_template.format(
+            query=self.query,
+            history=self.get_history(),
+            tools=', '.join([str(tool.name) for tool in self.tools.values()])
+        )
+        response = self.ask_model(prompt)
+        self.trace("assistant", f"thought: {response}")
+        self.decide(response)
 
-    def decide(self, response: str) -> None: ...
+    def decide(self, response: str) -> None:
+        ...
 
-    def act(self, tool_name: Name, query: str) -> None: ...
+    def act(self, tool_name: Name, query: str) -> None:
+        ...
 
-    def execute(self, query: str) -> str: ...
+    def execute(self, query: str) -> str:
+        ...
 
-    def ask_model(self, prompt: str) -> str: ...
+    def ask_model(self, prompt: str) -> str:
+        ...
