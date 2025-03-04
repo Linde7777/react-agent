@@ -32,7 +32,7 @@ class Tool:
 
     def use(self, query: str) -> Observation:
         try:
-            result=self.func(query)
+            return self.func(query)
         except Exception as e:
             logger.error(f"Error executing tool {self.name}: {e}")
             return str(e)
